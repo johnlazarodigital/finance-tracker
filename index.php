@@ -40,23 +40,78 @@ add_action( 'wp_ajax_insert_to_db_function', 'insert_to_db_function' );
 add_action( 'wp_ajax_priv_insert_to_db_function', 'insert_to_db_function' );
 function insert_to_db_function() {
 
-	// global $wpdb;
+	global $wpdb;
 
-	// $table_name = $wpdb->prefix . 'finance_tracker';
+	$table_name = $wpdb->prefix . 'fintra_records';
 
-	// $hash = 'hash';
+	$type = $_POST['type'];
+	$amount = $_POST['amount'];
+	$description = $_POST['description'];
 
-	// $result = $wpdb->query( $wpdb->prepare( 
-	// 	"
-	// 	INSERT INTO $table_name
-	// 	( hash )
-	// 	VALUES ( %s )
-	// 	",
-	// 	$hash
-	// ) );
+	$count = $wpdb->get_results( 
+		"
+		SELECT amount_after FROM $table_name
+		ORDER BY id DESC
+		LIMIT 1
+		"
+	);
+
+	if( $count )
+		$amount_after = $count[0]->amount_after;
+	else
+		$amount_after = 0;
+
+	if( $type == 'add' ) {
+		$amount_after = $amount_after + $amount;
+	} else {
+		$amount_after = $amount_after - $amount;	
+	}
+
+	$result = $wpdb->query( $wpdb->prepare( 
+		"
+		INSERT INTO $table_name
+		( description, amount, amount_after, date_created )
+		VALUES ( %s, %d, %d, NOW() )
+		",
+		$description,
+		$amount,
+		$amount_after
+	) );
+
+	if( ! $result )
+		$result = $wpdb->last_error;
+	else
+		$result = $amount_after;
 
     // return
-    echo json_encode( 'test function');
+    echo json_encode( $result );
+    wp_die();
+
+}
+
+add_action( 'wp_ajax_get_money_record', 'get_money_record' );
+add_action( 'wp_ajax_priv_get_money_record', 'get_money_record' );
+function get_money_record() {
+
+	global $wpdb;
+
+	$table_name = $wpdb->prefix . 'fintra_records';
+
+	$count = $wpdb->get_results( 
+		"
+		SELECT amount_after FROM $table_name
+		ORDER BY id DESC
+		LIMIT 1
+		"
+	);
+
+	if( $count )
+		$amount_after = $count[0]->amount_after;
+	else
+		$amount_after = 0;
+
+    // return
+    echo json_encode( $amount_after );
     wp_die();
 
 }
